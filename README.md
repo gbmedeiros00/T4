@@ -1,9 +1,13 @@
-Para rodar o back-end abra um terminal separado e use o comando:
+Como rodar o projeto:
 
+Backend
+<br>
 java -jar pl.jar
 
-Para rodar o front-end abra outro terminal e use os comandos:
-
+Frontend
+<br>
+cd frontend
+<br>
 npm install
 <br>
 npm start
