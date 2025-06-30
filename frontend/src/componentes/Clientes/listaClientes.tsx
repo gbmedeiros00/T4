@@ -1,15 +1,23 @@
 import { useState, useEffect } from "react";
 import FormCadastroCliente from "./formCadastroCliente";
+import FormListarInformacoes from "./formListarInformacoes";
 
 type Cliente = {
     id: number;
     nome: string;
     nomeSocial: string;
-    cpf?: string;
-    rg?: string;
-    dataCadastro?: string;
-    email?: string;
-    telefone?: string;
+    cpf: string;
+    rg: string;
+    dataCadastro: string;
+    email: string;
+    telefone: string;
+    genero: string;
+    rua: string;
+    numero: string;
+    bairro: string;
+    cidade: string;
+    estado: string;
+    cep: string;
 };
 
 type Props = {
@@ -22,11 +30,35 @@ function ListaCliente({ tema }: Props) {
     const [clientes, setClientes] = useState<Cliente[]>([]);
     const [modalAberto, setModalAberto] = useState(false);
     const [clienteEditando, setClienteEditando] = useState<Cliente | null>(null);
+    const [modalInfoAberto, setModalInfoAberto] = useState(false);
+    const [clienteInfo, setClienteInfo] = useState<Cliente | null>(null);
 
     useEffect(() => {
         fetch(`${API_URL}/clientes`)
             .then(res => res.json())
-            .then(data => setClientes(data))
+            .then(data => {
+                // Mapeia os dados recebidos para o formato esperado pelo frontend
+                const clientesMapeados = data.map((c: any) => ({
+                    id: c.id,
+                    nome: c.nome || "",
+                    nomeSocial: c.nomeSocial || "",
+                    cpf: c.cpf || "",
+                    rg: c.rg || "",
+                    dataCadastro: c.dataCadastro || "",
+                    email: c.email || "",
+                    telefone: c.telefones && c.telefones.length > 0
+                        ? `(${c.telefones[0].ddd}) ${c.telefones[0].numero}`
+                        : "",
+                    genero: c.genero || "",
+                    rua: c.endereco?.rua || "",
+                    numero: c.endereco?.numero || "",
+                    bairro: c.endereco?.bairro || "",
+                    cidade: c.endereco?.cidade || "",
+                    estado: c.endereco?.estado || "",
+                    cep: c.endereco?.codigoPostal || "",
+                }));
+                setClientes(clientesMapeados);
+            })
             .catch(() => setClientes([]));
     }, []);
 
@@ -43,6 +75,16 @@ function ListaCliente({ tema }: Props) {
     const fecharModal = () => {
         setModalAberto(false);
         setClienteEditando(null);
+    };
+
+    const abrirModalInfo = (cliente: Cliente) => {
+        setClienteInfo(cliente);
+        setModalInfoAberto(true);
+    };
+
+    const fecharModalInfo = () => {
+        setModalInfoAberto(false);
+        setClienteInfo(null);
     };
 
     const excluirCliente = (id: number) => {
@@ -80,7 +122,27 @@ function ListaCliente({ tema }: Props) {
                 .then(() => fetch(`${API_URL}/clientes`))
                 .then(res => res.json())
                 .then(data => {
-                    setClientes(data);
+                    // Repete o mapeamento após cadastrar
+                    const clientesMapeados = data.map((c: any) => ({
+                        id: c.id,
+                        nome: c.nome || "",
+                        nomeSocial: c.nomeSocial || "",
+                        cpf: c.cpf || "",
+                        rg: c.rg || "",
+                        dataCadastro: c.dataCadastro || "",
+                        email: c.email || "",
+                        telefone: c.telefones && c.telefones.length > 0
+                            ? `(${c.telefones[0].ddd}) ${c.telefones[0].numero}`
+                            : "",
+                        genero: c.genero || "",
+                        rua: c.endereco?.rua || "",
+                        numero: c.endereco?.numero || "",
+                        bairro: c.endereco?.bairro || "",
+                        cidade: c.endereco?.cidade || "",
+                        estado: c.endereco?.estado || "",
+                        cep: c.endereco?.codigoPostal || "",
+                    }));
+                    setClientes(clientesMapeados);
                     fecharModal();
                 });
         }
@@ -104,13 +166,14 @@ function ListaCliente({ tema }: Props) {
                         <span>
                             <strong>{cliente.nome}</strong>
                             {cliente.nomeSocial && <> ({cliente.nomeSocial})</>}
-                            {cliente.cpf && <> - CPF: {cliente.cpf}</>}
-                            {cliente.rg && <> - RG: {cliente.rg}</>}
-                            {cliente.dataCadastro && <> - Cadastro: {cliente.dataCadastro}</>}
-                            {cliente.email && <> - {cliente.email}</>}
-                            {cliente.telefone && <> - {cliente.telefone}</>}
                         </span>
                         <div>
+                            <button
+                                className="btn btn-sm btn-info me-2"
+                                onClick={() => abrirModalInfo(cliente)}
+                            >
+                                Ver Informações
+                            </button>
                             <button
                                 className="btn btn-sm btn-warning me-2"
                                 onClick={() => abrirModalEditar(cliente)}
@@ -129,33 +192,91 @@ function ListaCliente({ tema }: Props) {
             </ul>
 
             {modalAberto && (
-                <div className="modal show d-block" tabIndex={-1} role="dialog">
-                    <div className="modal-dialog" role="document">
-                        <div className="modal-content">
-                            <div className="modal-header">
-                                <h5 className="modal-title">
-                                    {clienteEditando ? "Atualizar Cliente" : "Novo Cliente"}
-                                </h5>
-                                <button type="button" className="btn-close" onClick={fecharModal}></button>
-                            </div>
-                            <div className="modal-body">
-                                <FormCadastroCliente
-                                    cliente={clienteEditando ? {
-                                        nome: clienteEditando.nome,
-                                        nomeSocial: clienteEditando.nomeSocial,
-                                        cpf: clienteEditando.cpf || "",
-                                        rg: clienteEditando.rg || "",
-                                        dataCadastro: clienteEditando.dataCadastro || "",
-                                        email: clienteEditando.email || "",
-                                        telefone: clienteEditando.telefone || "",
-                                    } : undefined}
-                                    onSubmit={handleSubmitCliente}
-                                    onCancel={fecharModal}
-                                />
+                <>
+                    <div
+                        style={{
+                            position: "fixed",
+                            top: 0,
+                            left: 0,
+                            width: "100vw",
+                            height: "100vh",
+                            backgroundColor: "rgba(0,0,0,0.5)",
+                            zIndex: 1040
+                        }}
+                    />
+                    <div className="modal show d-block" tabIndex={-1} role="dialog" style={{ zIndex: 1050 }}>
+                        <div className="modal-dialog" role="document">
+                            <div className="modal-content">
+                                <div className="modal-header">
+                                    <h5 className="modal-title">
+                                        {clienteEditando ? "Atualizar Cliente" : "Novo Cliente"}
+                                    </h5>
+                                    <button type="button" className="btn-close" onClick={fecharModal}></button>
+                                </div>
+                                <div className="modal-body">
+                                    <FormCadastroCliente
+                                        cliente={
+                                            clienteEditando
+                                                ? {
+                                                    nome: clienteEditando.nome || "",
+                                                    nomeSocial: clienteEditando.nomeSocial || "",
+                                                    cpf: clienteEditando.cpf || "",
+                                                    rg: clienteEditando.rg || "",
+                                                    dataCadastro: clienteEditando.dataCadastro || "",
+                                                    email: clienteEditando.email || "",
+                                                    telefone: clienteEditando.telefone || "",
+                                                    genero: clienteEditando.genero || "",
+                                                    rua: clienteEditando.rua || "",
+                                                    numero: clienteEditando.numero || "",
+                                                    bairro: clienteEditando.bairro || "",
+                                                    cidade: clienteEditando.cidade || "",
+                                                    estado: clienteEditando.estado || "",
+                                                    cep: clienteEditando.cep || "",
+                                                }
+                                                : undefined
+                                        }
+                                        onSubmit={handleSubmitCliente}
+                                        onCancel={fecharModal}
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </>
+            )}
+
+            {modalInfoAberto && clienteInfo && (
+                <>
+                    <div
+                        style={{
+                            position: "fixed",
+                            top: 0,
+                            left: 0,
+                            width: "100vw",
+                            height: "100vh",
+                            backgroundColor: "rgba(0,0,0,0.5)",
+                            zIndex: 1040
+                        }}
+                    />
+                    <div className="modal show d-block" tabIndex={-1} role="dialog" style={{ zIndex: 1050 }}>
+                        <div className="modal-dialog" role="document">
+                            <div className="modal-content">
+                                <div className="modal-header">
+                                    <h5 className="modal-title">
+                                        Informações do Cliente
+                                    </h5>
+                                    <button type="button" className="btn-close" onClick={fecharModalInfo}></button>
+                                </div>
+                                <div className="modal-body">
+                                    <FormListarInformacoes
+                                        cliente={clienteInfo}
+                                        onClose={fecharModalInfo}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </>
             )}
         </div>
     );
