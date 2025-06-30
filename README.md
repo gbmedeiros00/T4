@@ -5,4 +5,5 @@ java -jar pl.jar
 Para rodar o front-end abra outro terminal e use os comandos:
 
 npm install
+<br>
 npm start
